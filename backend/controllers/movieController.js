@@ -1,6 +1,8 @@
 import movieModel from "../models/movieModel.js";
 import adminModel from "../models/adminModel.js";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import userModel from "../models/userModel.js";
 
 export const addMovie = async (req, res) => {
   const extractedToken = req.headers.authorization.split(" ")[1];
@@ -33,6 +35,17 @@ export const addMovie = async (req, res) => {
       admin: adminId,
     });
     if (!newMovie) return res.status(500).json({ error: "Request failed..." });
+
+    const session = await mongoose.startSession();
+    const admin = await adminModel.findById(adminId);
+
+    await session.startTransaction();
+
+    await newMovie.save({ session });
+    admin.addedMovies.push(newMovie);
+    await admin.save({ session });
+
+    await session.commitTransaction();
     res
       .status(201)
       .json({ message: "Movie added succesfully", movie: newMovie });
@@ -46,7 +59,15 @@ export const getAllMovies = async (req, res) => {
   try {
     const movies = await movieModel
       .find()
-      .populate({ path: "admin", model: adminModel, select: "email" });
+      .populate({ path: "admin", model: adminModel, select: "email" })
+      .populate({
+        path: "bookings",
+        populate: {
+          path: "user",
+          model: userModel,
+          select: "name",
+        },
+      });
 
     if (!movies) return res.status(404).json({ error: "Movies not found" });
     res.status(200).json({ all_movies: movies });

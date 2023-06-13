@@ -1,10 +1,18 @@
 import userModel from "../models/userModel.js";
 import bcrypt from "bcryptjs";
-
+import bookingModel from "../models/bookingModel.js";
+import movieModel from "../models/movieModel.js";
 export const getAllUsers = async (req, res) => {
   let users;
   try {
-    users = await userModel.find();
+    users = await userModel.find().populate({
+      path: "bookings",
+      populate: {
+        path: "movie",
+        model: movieModel,
+        select: " title",
+      },
+    });
 
     if (!users) {
       return res.status(404).json({ error: "Users not found" });
@@ -110,6 +118,22 @@ export const userLogin = async (req, res) => {
     res.status(200).json({ message: "Login Success..", user: user });
   } catch (error) {
     res.status(500).json({ error: "Error while logging in..." });
+    console.log(error);
+  }
+};
+
+export const getBookingsOfUser = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.params.id).populate("bookings");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    console.log(user.bookings);
+    if (!user.bookings.length)
+      return res.status(404).json({ error: "No bookings found" });
+    res.status(200).json({ bookings: user.bookings });
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong: " + error.message });
     console.log(error);
   }
 };

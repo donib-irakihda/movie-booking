@@ -17,6 +17,12 @@ const userSchema = new Schema(
       required: true,
       minLength: 4,
     },
+    bookings: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Booking",
+      },
+    ],
   },
   { timestamps: true }
 );
